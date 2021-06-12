@@ -1,0 +1,17 @@
+---
+- hosts: localhost
+  name: Create AWS infrastructure with Terraforms
+  vars:
+    - id_generator: "0"
+    - deployment_directory: "../instances/Terraform-{{ id_generator | random | to_uuid }}"
+  tasks:
+
+    - name: Destroy Terraform deployment
+      terraform:
+        project_path: "./{{ deployment_directory }}/"
+        state: absent
+
+    - name: Destroy the instance Terraform directory
+      file:
+        path: "{{ deployment_directory }}"
+        state: absent

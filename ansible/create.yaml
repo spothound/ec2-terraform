@@ -1,0 +1,119 @@
+---
+- hosts: localhost
+  name: Create AWS infrastructure with Terraforms
+  vars:
+    - terraform_dir: ../terraform
+    - id_generator: "0"
+    - deployment_directory: "../instances/Terraform-{{ id_generator | random | to_uuid }}"
+  tasks:
+
+    - name: Create an instance directory from Terraform template
+      file:
+        path: "{{ deployment_directory }}"
+        state: directory
+
+    - name: Copy Terraform files
+      synchronize:
+        src: "{{ terraform_dir }}/"
+        dest: "{{ deployment_directory }}/"
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Deploy AWS resources with Terraform
+      terraform:
+        project_path: "./{{ deployment_directory }}/"
+        state: present
+        force_init: true
+      register: outputs
+
+    - name: Add all instance public DNS to host group
+      add_host:
+        name: "{{ item }}"
+        groups: ec2instances
+      loop: "{{ outputs.outputs.address.value }}"
+
+- hosts: ec2instances
+  name: Provision ec2 instance
+  user: ec2-user
+  become: yes
+  gather_facts: false
+  vars:
+    - sources_repository: https://github.com/spothound/simple_web.git
+    - service_name: simple_web
+    - ansible_python_interpreter: /bin/python3
+    - forwarded_ports: '80:80'
+
+  tasks:
+    - name: Wait for instances to become reachable over SSH
+      wait_for_connection:
+        delay: 3
+        timeout: 60
+
+    - name: Update all packages
+      yum:
+        name: '*'
+        state: latest
+        update_only: yes
+
+    - name: Ensure a list of yum packages are installed
+      yum:
+        name: "{{ packages }}"
+        state: latest
+        update_cache: yes
+      vars:
+        packages:
+        - python3-pip
+        - yum-utils
+        - device-mapper-persistent-data
+        - lvm2
+        - amazon-linux-extras
+        - git
+
+    - name: Add extras repository
+      shell: yum-config-manager --enable extras
+
+    - name: Install docker-ce (centos) via amazon-linux-extras packages
+      shell: "amazon-linux-extras install docker=18.06.1 -y"
+
+    - name: Enable Docker CE service at startup
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Ensure Python pip packages are installed
+      pip:
+        name: "{{ packages }}"
+        executable: pip3
+      vars:
+        packages:
+        - docker
+        - six
+
+    - name: Git checkout
+      ansible.builtin.git:
+        repo: '{{ sources_repository }}'
+        dest: "/home/ec2-user/{{ service_name }}"
+
+    - name: Check if Dockerfile exists
+      stat:
+        path: "/home/ec2-user/{{ service_name }}/Dockerfile"
+      register: dockerfile
+
+    - name: Launch Docker service
+      block:
+        - name: build container image
+          docker_image:
+            name: "{{ service_name }}"
+            build:
+              path: "/home/ec2-user/{{ service_name }}"
+            source: build
+            state: present
+
+        - name: Start service docker
+          docker_container:
+            name: "{{ service_name }}"
+            image: "{{ service_name }}"
+            state: started
+            ports:
+              - "{{ forwarded_ports }}"
+      when: dockerfile.stat.exists
