@@ -14,12 +14,12 @@ resource "random_uuid" "id" {}
 provider "aws" {
   profile    = "default"
   region     = "eu-west-3"
-  shared_credentials_file = "../.aws/credentials"
+  shared_credentials_file = ".aws/credentials"
 }
 
 resource "aws_key_pair" "ansible" {
   key_name   = "key_${random_uuid.id.result}"
-  public_key = file("ansible.pub")
+  public_key = file("ec2_key.pub")
 }
 
 resource "aws_security_group" "web_server" {

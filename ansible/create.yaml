@@ -5,7 +5,17 @@
     - terraform_dir: ../terraform
     - id_generator: "0"
     - deployment_directory: "../instances/Terraform-{{ id_generator | random | to_uuid }}"
+    - key_name: 'ec2_key'
   tasks:
+
+    - name: Generate an OpenSSH keypair for EC2 instances
+      shell: "ls ./{{ key_name }} || ssh-keygen -N '' -f ./{{ key_name }} > /dev/null"
+      register: key_log
+
+    - name: Copy public key to Terraform directory
+      copy:
+        src: "{{ key_name }}.pub"
+        dest: "../terraform/{{ key_name }}.pub"
 
     - name: Create an instance directory from Terraform template
       file:
