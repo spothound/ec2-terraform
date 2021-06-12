@@ -90,7 +90,7 @@
         - six
 
     - name: Git checkout
-      ansible.builtin.git:
+      git:
         repo: '{{ sources_repository }}'
         dest: "/home/ec2-user/{{ service_name }}"
 
