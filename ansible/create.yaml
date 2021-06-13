@@ -59,6 +59,9 @@
     - service_name: simple_web
     - deployment_id: 'DEFAULT_DEPLOYMENT'
     - deployment_directory: "{{ playbook_dir }}/../instances/TERRAFORM_{{ deployment_id }}"
+    - mq_address: 'test'
+    - mq_port: '5672'
+    - user_home: /home/ec2-user
 
   tasks:
     - name: Wait for instances to become reachable over SSH
@@ -107,16 +110,15 @@
         - docker
         - docker-compose
         - six
-    - name: get user home directory
-      shell: >
-             echo $HOME
-      changed_when: false
-      register: user_home
-
     - name: Git checkout
       git:
         repo: '{{ sources_repository }}'
         dest: "{{ user_home }}{{ service_name }}"
+
+    - name: Configure simple_web service
+      copy:
+        content: "var config = {}; config.mq_ip= '{{ mq_address }}'; config.mq_port = '{{ mq_port }}'; module.exports = config;"
+        dest: "{{ user_home }}{{ service_name }}/config.js"
 
     - name: Check if Dockerfile file exists
       stat:
