@@ -3,4 +3,6 @@ terraform.tfstate.backup
 terraform.tfstate
 ansible.pub
 .aws
+ec2_key.pub
+ec2_key
 .aws

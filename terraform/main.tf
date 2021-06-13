@@ -69,12 +69,16 @@ variable "service_name" {
   description = "This is the name of the service that will be deployed on the EC2 instance. For example MQ or simple_web."
 }
 
+variable "deploy_id" {
+  description = "This is the human-readable id for this deployment. It may content the Jenkins build number if was launched from Jenkins."
+}
+
 resource "aws_instance" "app_server" {
   ami           = "ami-00c08ad1a6ca8ca7c"
   instance_type = "t2.micro"
   key_name      = "key_${random_uuid.id.result}"
   tags = {
-    Name = "[${var.service_name}] ${random_uuid.id.result}"
+    Name = "[${var.service_name}][${var.deploy_id}] ${random_uuid.id.result}"
   }
   vpc_security_group_ids = [
     "sec_group_${random_uuid.id.result}"

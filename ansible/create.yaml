@@ -4,8 +4,11 @@
   vars:
     - terraform_dir: ../terraform
     - deployment_id: 'DEFAULT_DEPLOYMENT'
-    - deployment_directory: "{{ playbook_dir }}../instances/TERRAFORM_{{ deployment_id }}"
+    - deployment_directory: "{{ playbook_dir }}/../instances/TERRAFORM_{{ deployment_id }}"
     - private_key: '{{ deployment_directory }}/ec2_key'
+    - service_name: simple_web
+    - deployment_id: 'DEFAULT_DEPLOYMENT'
+    - deployment_directory: "{{ playbook_dir }}/../instances/TERRAFORM_{{ deployment_id }}"
   tasks:
 
     - name: Create an instance directory from Terraform template
@@ -23,9 +26,14 @@
       shell: "ssh-keygen -N '' -f {{ private_key }} > /dev/null"
       register: key_log
 
+    - name: Write Terraform vars to tfvars file
+      copy:
+        content: "service_name = \"{{ service_name }}\"\ndeploy_id = \"{{ deployment_id }}\"\n"
+        dest: "{{ deployment_directory }}/terraform.tfvars"
+
     - name: Deploy AWS resources with Terraform
       terraform:
-        project_path: "./{{ deployment_directory }}/"
+        project_path: "{{ deployment_directory }}/"
         state: present
         force_init: true
       register: outputs
@@ -46,10 +54,11 @@
     - service_name: simple_web
     - ansible_python_interpreter: /bin/python3
     - forwarded_ports: '80:80'
-    - deployment_id: 'DEFAULT_DEPLOYMENT'
-    - deployment_directory: "{{ playbook_dir }}../instances/TERRAFORM_{{ deployment_id }}"
     - ansible_ssh_private_key_file: '{{ deployment_directory }}/ec2_key'
     - ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    - service_name: simple_web
+    - deployment_id: 'DEFAULT_DEPLOYMENT'
+    - deployment_directory: "{{ playbook_dir }}/../instances/TERRAFORM_{{ deployment_id }}"
 
   tasks:
     - name: Wait for instances to become reachable over SSH
