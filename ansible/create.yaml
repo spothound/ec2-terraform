@@ -2,6 +2,7 @@
 - hosts: localhost
   name: Create AWS infrastructure with Terraforms
   vars:
+    - port: '80'
     - terraform_dir: ../terraform
     - deployment_id: 'DEFAULT_DEPLOYMENT'
     - deployment_directory: "{{ playbook_dir }}/../instances/TERRAFORM_{{ deployment_id }}"
@@ -28,7 +29,7 @@
 
     - name: Write Terraform vars to tfvars file
       copy:
-        content: "service_name = \"{{ service_name }}\"\ndeploy_id = \"{{ deployment_id }}\"\n"
+        content: "service_name = \"{{ service_name }}\"\ndeploy_id = \"{{ deployment_id }}\"\nport=\"{{ port }}\""
         dest: "{{ deployment_directory }}/terraform.tfvars"
 
     - name: Deploy AWS resources with Terraform
@@ -59,7 +60,7 @@
     - service_name: simple_web
     - deployment_id: 'DEFAULT_DEPLOYMENT'
     - deployment_directory: "{{ playbook_dir }}/../instances/TERRAFORM_{{ deployment_id }}"
-    - mq_address: 'test'
+    - mq_address: '0.0.0.0'
     - mq_port: '5672'
     - user_home: /home/ec2-user
 
@@ -113,21 +114,29 @@
     - name: Git checkout
       git:
         repo: '{{ sources_repository }}'
-        dest: "{{ user_home }}{{ service_name }}"
+        dest: "{{ user_home }}/{{ service_name }}"
+
+    - name: Change port on mq service configuration
+      replace:
+        path: /etc/hosts
+        regexp: '        - 5672:5672'
+        replace: '        - 5672:{{ port }}'
+      when: service_name == 'simple_mq'
 
     - name: Configure simple_web service
       copy:
         content: "var config = {}; config.mq_ip= '{{ mq_address }}'; config.mq_port = '{{ mq_port }}'; module.exports = config;"
-        dest: "{{ user_home }}{{ service_name }}/config.js"
+        dest: "{{ user_home }}/{{ service_name }}/config.js"
+      when: service_name == 'simple_web'
 
     - name: Check if Dockerfile file exists
       stat:
-        path: "{{ user_home }}{{ service_name }}/Dockerfile"
+        path: "{{ user_home }}/{{ service_name }}/Dockerfile"
       register: dockerfile
 
     - name: Check if docker-compose file exists
       stat:
-        path: "{{ user_home }}{{ service_name }}/docker-compose.yaml"
+        path: "{{ user_home }}/{{ service_name }}/docker-compose.yaml"
       register: dockercompose
 
 
@@ -137,7 +146,7 @@
           docker_image:
             name: "{{ service_name }}"
             build:
-              path: "{{ user_home }}{{ service_name }}"
+              path: "{{ user_home }}/{{ service_name }}"
             source: build
             state: present
 
@@ -152,5 +161,5 @@
 
     - name: Launch Docker-compose service
       docker_compose:
-        project_src: "{{ user_home }}{{ service_name }}"
+        project_src: "{{ user_home }}/{{ service_name }}"
       when: dockercompose.stat.exists

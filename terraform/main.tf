@@ -38,17 +38,9 @@ resource "aws_security_group" "web_server" {
   }
 
   ingress {
-    description = "HTTPS"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
     description = "HTTP"
-    from_port   = 80
-    to_port     = 80
+    from_port   = var.port
+    to_port     = var.port
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -71,6 +63,10 @@ variable "service_name" {
 
 variable "deploy_id" {
   description = "This is the human-readable id for this deployment. It may content the Jenkins build number if was launched from Jenkins."
+}
+
+variable "port" {
+  description = "This is the port that will be open in the network so others could communicate."
 }
 
 resource "aws_instance" "app_server" {
