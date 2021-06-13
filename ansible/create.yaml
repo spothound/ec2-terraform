@@ -3,8 +3,8 @@
   name: Create AWS infrastructure with Terraforms
   vars:
     - terraform_dir: ../terraform
-    - id_generator: 0
-    - deployment_directory: "../instances/Terraform-{{ id_generator | random | to_uuid }}"
+    - deployment_id: 'DEFAULT_DEPLOYMENT'
+    - deployment_directory: "../instances/TERRAFORM_{{ deployment_id }}"
     - key_name: 'ec2_key'
   tasks:
 

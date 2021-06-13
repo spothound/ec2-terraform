@@ -1,4 +1,4 @@
-ansible.pem
-ansible.pub
+ec2_key
+ec2_key.pub
 .aws
 
