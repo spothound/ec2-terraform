@@ -8,7 +8,7 @@
 
     - name: Destroy Terraform deployment
       terraform:
-        project_path: "./{{ deployment_directory }}/"
+        project_path: "{{ deployment_directory }}/"
         state: absent
 
     - name: Destroy the instance Terraform directory

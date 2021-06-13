@@ -105,17 +105,29 @@
       vars:
         packages:
         - docker
+        - docker-compose
         - six
+    - name: get user home directory
+      shell: >
+             echo $HOME
+      changed_when: false
+      register: user_home
 
     - name: Git checkout
       git:
         repo: '{{ sources_repository }}'
-        dest: "/home/ec2-user/{{ service_name }}"
+        dest: "{{ user_home }}{{ service_name }}"
 
-    - name: Check if Dockerfile exists
+    - name: Check if Dockerfile file exists
       stat:
-        path: "/home/ec2-user/{{ service_name }}/Dockerfile"
+        path: "{{ user_home }}{{ service_name }}/Dockerfile"
       register: dockerfile
+
+    - name: Check if docker-compose file exists
+      stat:
+        path: "{{ user_home }}{{ service_name }}/docker-compose.yaml"
+      register: dockercompose
+
 
     - name: Launch Docker service
       block:
@@ -123,7 +135,7 @@
           docker_image:
             name: "{{ service_name }}"
             build:
-              path: "/home/ec2-user/{{ service_name }}"
+              path: "{{ user_home }}{{ service_name }}"
             source: build
             state: present
 
@@ -135,3 +147,8 @@
             ports:
               - "{{ forwarded_ports }}"
       when: dockerfile.stat.exists
+
+    - name: Launch Docker-compose service
+      docker_compose:
+        project_src: "{{ user_home }}{{ service_name }}"
+      when: dockercompose.stat.exists
