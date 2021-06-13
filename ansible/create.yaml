@@ -4,18 +4,9 @@
   vars:
     - terraform_dir: ../terraform
     - deployment_id: 'DEFAULT_DEPLOYMENT'
-    - deployment_directory: "../instances/TERRAFORM_{{ deployment_id }}"
-    - key_name: 'ec2_key'
+    - deployment_directory: "{{ playbook_dir }}../instances/TERRAFORM_{{ deployment_id }}"
+    - private_key: '{{ deployment_directory }}/ec2_key'
   tasks:
-
-    - name: Generate an OpenSSH keypair for EC2 instances
-      shell: "ls ./{{ key_name }} || ssh-keygen -N '' -f ./{{ key_name }} > /dev/null"
-      register: key_log
-
-    - name: Copy public key to Terraform directory
-      copy:
-        src: "{{ key_name }}.pub"
-        dest: "../terraform/{{ key_name }}.pub"
 
     - name: Create an instance directory from Terraform template
       file:
@@ -27,6 +18,10 @@
         src: "{{ terraform_dir }}/"
         dest: "{{ deployment_directory }}/"
       delegate_to: "{{ inventory_hostname }}"
+
+    - name: Generate an OpenSSH keypair for EC2 instances
+      shell: "ssh-keygen -N '' -f {{ private_key }} > /dev/null"
+      register: key_log
 
     - name: Deploy AWS resources with Terraform
       terraform:
@@ -51,6 +46,10 @@
     - service_name: simple_web
     - ansible_python_interpreter: /bin/python3
     - forwarded_ports: '80:80'
+    - deployment_id: 'DEFAULT_DEPLOYMENT'
+    - deployment_directory: "{{ playbook_dir }}../instances/TERRAFORM_{{ deployment_id }}"
+    - ansible_ssh_private_key_file: '{{ deployment_directory }}/ec2_key'
+    - ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
 
   tasks:
     - name: Wait for instances to become reachable over SSH
